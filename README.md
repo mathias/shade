@@ -23,11 +23,11 @@ From [Dictionary.com](http://dictionary.reference.com/browse/shade):
     $ boot development
     ```
 
-2. Open the compiled html file. It's located at:
+2. The live-reloaded version of the page is served at:
 
-    ```
-    resources/public/index.html
-    ```
+	```
+	http://localhost:8000
+	```
 
 3. You're already done.
 
