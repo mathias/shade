@@ -1,0 +1,132 @@
+(page "index.html"
+      (:require [tailrecursion.hoplon.reload :refer [reload-all]]))
+
+;; page meta
+(defc page-title "Shade")
+(defc meta-description "")
+(defc favicon-path "/favicon.ico")
+
+;; blog settings
+(defc blog-url "localhost:8000")
+(defc= blog-rss-url (str blog-url "/rss/"))
+(defc show-logo? false)
+(defc blog-logo-url "/images/logo.png")
+(defc blog-title "Shade")
+(defc blog-description "Spooky blogging on Hoplon.")
+
+;; content settings
+(defc body-class "home-template")
+
+;; Blog content
+(defn excerpt-cell [s]
+  (cell (subs s 0 139)))
+
+(let [content "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec a diam lectus. Sed sit amet ipsum mauris. Maecenas congue ligula ac quam viverra nec consectetur ante hendrerit. Donec et mollis dolor. Praesent et diam eget libero egestas mattis sit amet vitae augue. Nam tincidunt congue enim, ut porta lorem lacinia consectetur. Donec ut libero sed arcu vehicula ultricies a non tortor. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean ut gravida lorem. Ut turpis felis, pulvinar a semper sed, adipiscing id dolor. Pellentesque auctor nisi id magna consequat sagittis. Curabitur dapibus enim sit amet elit pharetra tincidunt feugiat nisl imperdiet. Ut convallis libero in urna ultrices accumsan. Donec sed odio eros. Donec viverra mi quis quam pulvinar at malesuada arcu rhoncus. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. In rutrum accumsan ultricies. Mauris vitae nisi at sem facilisis semper ac in est."]  
+  (def posts [{:title (cell "Hello world")
+               :url (cell "/posts/foo")
+               :classes ["foo"]
+               :content (cell content)
+               :excerpt (excerpt-cell content)
+               :published-at "2014-08-01"
+               :author {;;:image-url "/images/author.png" 
+                        :url "/author/matt-gauger"
+                        :name "Matt Gauger"}}]))
+
+;; content helper elems
+(defelem author
+  [author]
+  (a :href (:url author)
+     (:name author)))
+
+;; content elems
+(defelem main-header
+  []
+  (header :class "main-header no-cover"
+    (nav :class "main-nav overlay clearfix"
+      (a :href blog-url :class "blog-logo" :do-toggle show-logo?
+        (img :src blog-logo-url :alt "Blog Logo"))
+      (a :href blog-rss-url :class "subscribe-button icon-feed"
+         (text "Subscribe")))
+    (div :class "vertical"
+         (div :class "main-header-content inner"
+              (h1 :class "page-title" blog-title)
+              (h2 :class "page-description" blog-description))
+         (a :href "#/content" :class "scroll-down icon-arrow-left"
+            (span :class "hidden" (text "Scroll down"))))))
+
+(defn classes-for-post [post]
+  (clojure.string/join " " (apply conj ["post"] (:classes post))))
+
+(defelem blog-post-content
+  [post]
+  (nav :class "main-nav clearfix"
+       (a :href blog-url :class "back-button icon-arrow-left" "Home")
+       (a :href blog-rss-url :class "subscribe-button icon-feed" "Subscribe"))
+  (div :class "content" :role "main"
+    (article :class (classes-for-post post)
+      (header :class "post-header"
+              (h1 :class "post-title" (:title post))
+              (section :class "post-meta"
+                (html-time :class "post-date" :datetime (:published-at post)
+                  (:published-at post))))
+      (section :class "post-content"
+        (:content post)))))
+
+(defelem blog-post-summary
+  [post]
+  (article :class (classes-for-post post)
+    (header :class "post-header"
+      (h2 :class "post-title"
+        (a :href (:url post) :class "read-more"
+           (:title post))))
+    (section :class "post-excerpt"
+      (p (:excerpt post))
+      (a :href (:url post) :class "read-more"
+         "\u00BB"))
+    (footer :class "post-meta"
+      (img :class "author-thumb" :src (get-in post [:author :image-url]) :alt "Author image" :nopin "nopin" :do-toggle (get-in post [:author :image-url]))
+      (author (:author post))
+      (html-time :class "post-date" :datetime (:published-at post)
+                 (text (:published-at post))))))
+
+(defelem page-content
+  []
+  (div {:id "content" :class "content" :role "main"}
+       (div :class "extra-pagination inner")
+       (map blog-post-summary posts)
+       (nav :class "pagination" :role "navigation")))
+
+(defelem page-footer
+ []
+ (footer :class "site-footer clearfix"))
+
+;; Live reload functionality:
+(reload-all 500)
+
+(html
+  (head
+   ;; document settings
+   (meta :charset "utf-8")
+   (meta :http-equiv "X-UA-Compatible" :content "IE=edge")
+
+   ;; page meta
+   (title page-title)
+   (meta :name "description" :content meta-description)
+
+   (meta :name "HandheldFriendly" :content "True")
+   (meta :name "viewport" :content "width=device-width, initial-scale=1.0")
+
+   (link :rel "shortcut icon" :href favicon-path)
+
+   ;; stylesheets
+   (link :rel "stylesheet" :type "text/css" :href "css/main.css")
+   (link :rel "stylesheet" :type "text/css" :href "css/caspar.css")
+   (link :rel "stylesheet" :type "text/css" :href "//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400"))
+
+  (body :class body-class
+    ;; index:
+    (main-header)
+    (page-content)
+    ;; individual blog post:
+    (blog-post-content (first posts))
+    (page-footer)))
