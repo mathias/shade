@@ -1,51 +1,92 @@
 (page "index.html"
-      (:require [tailrecursion.hoplon.reload :refer [reload-all]]))
+  (:refer-hoplon :exclude [a])
+  (:require [tailrecursion.hoplon.reload :refer [reload-all]]))
+
+;; helpers
+(defn route-post
+  [path posts]
+  (when-not (empty? path)
+    (->> posts (filter #(= path (:url %))) first)))
 
 ;; page meta
-(defc page-title "Shade")
+(defc page-title       "Shade")
 (defc meta-description "")
-(defc favicon-path "/favicon.ico")
+(defc favicon-path     "/favicon.ico")
 
 ;; blog settings
-(defc blog-url "localhost:8000")
-(defc= blog-rss-url (str blog-url "/rss/"))
-(defc show-logo? false)
-(defc blog-logo-url "/images/logo.png")
-(defc blog-title "Shade")
+(defc blog-url         "/")
+(defc= blog-rss-url    (str blog-url "/rss/"))
+(defc show-logo?       false)
+(defc blog-logo-url    "/images/logo.png")
+(defc blog-title       "Shade")
 (defc blog-description "Spooky blogging on Hoplon.")
 
 ;; content settings
-(defc body-class "home-template")
+(defc body-class       "home-template")
 
 ;; Blog content
-(defn excerpt-cell [s]
-  (cell (subs s 0 139)))
+(def dummy-content
+  "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec a diam lectus.
+  Sed sit amet ipsum mauris. Maecenas congue ligula ac quam viverra nec
+  consectetur ante hendrerit. Donec et mollis dolor. Praesent et diam eget
+  libero egestas mattis sit amet vitae augue. Nam tincidunt congue enim, ut
+  porta lorem lacinia consectetur. Donec ut libero sed arcu vehicula ultricies a
+  non tortor. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean ut
+  gravida lorem. Ut turpis felis, pulvinar a semper sed, adipiscing id dolor.
+  Pellentesque auctor nisi id magna consequat sagittis. Curabitur dapibus enim
+  sit amet elit pharetra tincidunt feugiat nisl imperdiet. Ut convallis libero
+  in urna ultrices accumsan. Donec sed odio eros. Donec viverra mi quis quam
+  pulvinar at malesuada arcu rhoncus. Cum sociis natoque penatibus et magnis dis
+  parturient montes, nascetur ridiculus mus. In rutrum accumsan ultricies.
+  Mauris vitae nisi at sem facilisis semper ac in est.")
+(def dummy-excerpt (subs dummy-content 0 139))
 
-(let [content "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec a diam lectus. Sed sit amet ipsum mauris. Maecenas congue ligula ac quam viverra nec consectetur ante hendrerit. Donec et mollis dolor. Praesent et diam eget libero egestas mattis sit amet vitae augue. Nam tincidunt congue enim, ut porta lorem lacinia consectetur. Donec ut libero sed arcu vehicula ultricies a non tortor. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean ut gravida lorem. Ut turpis felis, pulvinar a semper sed, adipiscing id dolor. Pellentesque auctor nisi id magna consequat sagittis. Curabitur dapibus enim sit amet elit pharetra tincidunt feugiat nisl imperdiet. Ut convallis libero in urna ultrices accumsan. Donec sed odio eros. Donec viverra mi quis quam pulvinar at malesuada arcu rhoncus. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. In rutrum accumsan ultricies. Mauris vitae nisi at sem facilisis semper ac in est."
-      welcome-content "You're live! Nice. We've put together a little post to introduce you to the Shade and get you started. Clever."]
-  (def posts [{:title (cell "Hello world")
-               :url (cell "/posts/foo")
-               :classes ["foo"]
-               :content (cell content)
-               :excerpt (excerpt-cell content)
-               :published-at "2014-08-01"
-               :author {;;:image-url "/images/author.png"
-                        :url "/author/matt-gauger"
-                        :name "Matt Gauger"}}
-              {:title (cell "Welcome to Shade")
-               :url (cell "/posts/welcome-to-shade")
-               :classes ["getting-started"]
-               :content (cell welcome-content)
-               :excerpt (excerpt-cell welcome-content)
-               :published-at "2013-08-01"
-               :author {:url "/author/shade-owner"
-                        :name "Shade Owner"}}]))
+(defc posts
+  [{:title   "Hello world foo"
+    :url     "/posts/foo"
+    :classes ["foo"]
+    :content dummy-content
+    :excerpt dummy-excerpt
+    :published-at "2014-08-01"
+    :author { ;;:image-url "/images/author.png"
+             :url "/author/matt-gauger"
+             :name "Matt Gauger"}}
 
-;; content helper elems
-(defelem author
-  [author]
-  (a :href (:url author)
-     (:name author)))
+   {:title   "Hello world bar"
+    :url     "/posts/bar"
+    :classes ["foo"]
+    :content dummy-content
+    :excerpt dummy-excerpt
+    :published-at "2014-08-01"
+    :author { ;;:image-url "/images/author.png"
+             :url "/author/matt-gauger"
+             :name "Matt Gauger"}}
+
+   {:title   "Hello world baz"
+    :url     "/posts/baz"
+    :classes ["foo"]
+    :content dummy-content
+    :excerpt dummy-excerpt
+    :published-at "2014-08-01"
+    :author { ;;:image-url "/images/author.png"
+             :url "/author/matt-gauger"
+             :name "Matt Gauger"}}])
+
+;; routing
+(defc  path          nil)
+(defc= selected-post (route-post path posts))
+
+(add-watch selected-post (gensym) #(.scrollTo js/window 0 0))
+(on! js/window :popstate #(reset! path (.. js/window -location -pathname)))
+
+(defelem a
+  [attr kids]
+  (with-let [elem (tailrecursion.hoplon/a attr kids)]
+    (on! elem :click
+      #(with-let [_ false]
+         (reset! path (.-pathname elem))
+         (.. js/window -history
+           (pushState (js-obj) "" (.-href elem)))))))
 
 ;; content elems
 (defelem main-header
@@ -67,75 +108,76 @@
   (clojure.string/join " " (apply conj ["post"] (:classes post))))
 
 (defelem blog-post-content
-  [post]
-  (nav :class "main-nav clearfix"
-       (a :href blog-url :class "back-button icon-arrow-left" "Home")
-       (a :href blog-rss-url :class "subscribe-button icon-feed" "Subscribe"))
-  (div :class "content" :role "main"
-    (article :class (classes-for-post post)
-      (header :class "post-header"
-              (h1 :class "post-title" (:title post))
-              (section :class "post-meta"
-                (html-time :class "post-date" :datetime (:published-at post)
-                  (:published-at post))))
-      (section :class "post-content"
-        (:content post)))))
+  [{:keys [state]} _]
+  (cell-let [{:keys [title published-at content]} state]
+    (div
+      (nav :class "main-nav clearfix"
+        (a :href blog-url :class "back-button icon-arrow-left" "Home")
+        (a :href blog-rss-url :class "subscribe-button icon-feed" "Subscribe"))
+      (div :class "content" :role "main"
+        (article :attr (cell= {:class (classes-for-post state)})
+          (header :class "post-header"
+            (h1 :class "post-title" :text title)
+            (section :class "post-meta"
+              (html-time :class "post-date" :datetime published-at :text published-at)))
+          (section :class "post-content" :text content))))))
 
 (defelem blog-post-summary
-  [post]
-  (article :class (classes-for-post post)
-    (header :class "post-header"
-      (h2 :class "post-title"
-        (a :href (:url post) :class "read-more"
-           (:title post))))
-    (section :class "post-excerpt"
-      (p (:excerpt post))
-      (a :href (:url post) :class "read-more"
-         "\u00BB"))
-    (footer :class "post-meta"
-      (img :class "author-thumb" :src (get-in post [:author :image-url]) :alt "Author image" :nopin "nopin" :do-toggle (get-in post [:author :image-url]))
-      (author (:author post))
-      (html-time :class "post-date" :datetime (:published-at post)
-                 (text (:published-at post))))))
+  [{:keys [state]} _]
+  (cell-let [{author' :author :keys [title url excerpt published-at]} state
+             {author-url :url author-name :name author-image :image-url} author']
+    (article :attr (cell= {:class (classes-for-post state)})
+      (header :class "post-header"
+        (h2 :class "post-title"
+          (a :href url :class "read-more" :text title)))
+      (section
+        :class "post-excerpt"
+        (p :text excerpt)
+        (a :href url :class "read-more" "\u00BB"))
+      (footer :class "post-meta"
+        (img :class "author-thumb" :alt "Author image" :nopin "nopin" :src author-image :toggle author-image)
+        (a :href author-url :text author-name)
+        (html-time :class "post-date" :datetime published-at (text "~{published-at}"))))))
 
 (defelem page-content
   []
-  (div {:id "content" :class "content" :role "main"}
-       (div :class "extra-pagination inner")
-       (map blog-post-summary posts)
-       (nav :class "pagination" :role "navigation")))
+  (div :id "content" :class "content" :role "main"
+    (div :class "extra-pagination inner")
+    (loop-tpl :bindings [post posts]
+      (blog-post-summary :state post))
+    (nav :class "pagination" :role "navigation")))
 
 (defelem page-footer
- []
- (footer :class "site-footer clearfix"))
+  []
+  (footer :class "site-footer clearfix"))
 
 ;; Live reload functionality:
 (reload-all 500)
 
 (html
   (head
-   ;; document settings
-   (meta :charset "utf-8")
-   (meta :http-equiv "X-UA-Compatible" :content "IE=edge")
+    ;; document settings
+    (meta :charset "utf-8")
+    (meta :http-equiv "X-UA-Compatible" :content "IE=edge")
 
-   ;; page meta
-   (title page-title)
-   (meta :name "description" :content meta-description)
+    ;; page meta
+    (title page-title)
+    (meta :name "description" :content meta-description)
 
-   (meta :name "HandheldFriendly" :content "True")
-   (meta :name "viewport" :content "width=device-width, initial-scale=1.0")
+    (meta :name "HandheldFriendly" :content "True")
+    (meta :name "viewport" :content "width=device-width, initial-scale=1.0")
 
-   (link :rel "shortcut icon" :href favicon-path)
+    (link :rel "shortcut icon" :href favicon-path)
 
-   ;; stylesheets
-   (link :rel "stylesheet" :type "text/css" :href "css/main.css")
-   (link :rel "stylesheet" :type "text/css" :href "css/caspar.css")
-   (link :rel "stylesheet" :type "text/css" :href "//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400"))
+    ;; stylesheets
+    (link :rel "stylesheet" :type "text/css" :href "css/main.css")
+    (link :rel "stylesheet" :type "text/css" :href "css/caspar.css")
+    (link :rel "stylesheet" :type "text/css" :href "//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400"))
 
   (body :class body-class
     ;; index:
-    (main-header)
-    (page-content)
+    ((main-header) :toggle (cell= (not selected-post)))
+    ((page-content) :toggle (cell= (not selected-post)))
     ;; individual blog post:
-    (blog-post-content (first posts))
+    ((blog-post-content :state selected-post) :toggle selected-post)
     (page-footer)))
