@@ -1,12 +1,6 @@
 (page "index.html"
-  (:refer-hoplon :exclude [a])
-  (:require [tailrecursion.hoplon.reload :refer [reload-all]]))
-
-;; helpers
-(defn route-post
-  [path posts]
-  (when-not (empty? path)
-    (->> posts (filter #(= path (:url %))) first)))
+  (:require [tailrecursion.hoplon.reload :refer [reload-all]]
+            [tailrecursion.javelin :refer [cell]]))
 
 ;; page meta
 (defc page-title       "Shade")
@@ -43,7 +37,7 @@
 
 (defc posts
   [{:title   "Hello world foo"
-    :url     "/posts/foo"
+    :url     "#!/posts/foo"
     :classes ["foo"]
     :content dummy-content
     :excerpt dummy-excerpt
@@ -53,8 +47,8 @@
              :name "Matt Gauger"}}
 
    {:title   "Hello world bar"
-    :url     "/posts/bar"
-    :classes ["foo"]
+    :url     "#!/posts/bar"
+    :classes []
     :content dummy-content
     :excerpt dummy-excerpt
     :published-at "2014-08-01"
@@ -63,30 +57,26 @@
              :name "Matt Gauger"}}
 
    {:title   "Hello world baz"
-    :url     "/posts/baz"
-    :classes ["foo"]
+    :url     "#!/posts/baz"
+    :classes []
     :content dummy-content
     :excerpt dummy-excerpt
     :published-at "2014-08-01"
     :author { ;;:image-url "/images/author.png"
-             :url "/author/matt-gauger"
+             :url "#!/author/matt-gauger"
              :name "Matt Gauger"}}])
 
 ;; routing
-(defc  path          nil)
-(defc= selected-post (route-post path posts))
+(defc current-route (.. js/window -location -hash))
 
-(add-watch selected-post (gensym) #(.scrollTo js/window 0 0))
-(on! js/window :popstate #(reset! path (.. js/window -location -pathname)))
+(defn router
+  [requested-route]
+  (do
+    (.log js/console
+          (clojure.string/split requested-route "/"))
+    (reset! current-route requested-route)))
 
-(defelem a
-  [attr kids]
-  (with-let [elem (tailrecursion.hoplon/a attr kids)]
-    (on! elem :click
-      #(with-let [_ false]
-         (reset! path (.-pathname elem))
-         (.. js/window -history
-           (pushState (js-obj) "" (.-href elem)))))))
+(def route (route-cell current-route router))
 
 ;; content elems
 (defelem main-header
@@ -152,7 +142,17 @@
   (footer :class "site-footer clearfix"))
 
 ;; Live reload functionality:
-(reload-all 500)
+;;(reload-all 500)
+
+(defelem index-page
+  []
+  (div :id "container"
+    (main-header)
+    (page-content)))
+
+(def current-content
+  (cell
+   (index-page)))
 
 (html
   (head
@@ -175,9 +175,5 @@
     (link :rel "stylesheet" :type "text/css" :href "//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic|Open+Sans:700,400"))
 
   (body :class body-class
-    ;; index:
-    ((main-header) :toggle (cell= (not selected-post)))
-    ((page-content) :toggle (cell= (not selected-post)))
-    ;; individual blog post:
-    ((blog-post-content :state selected-post) :toggle selected-post)
+    (div current-content)
     (page-footer)))
