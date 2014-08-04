@@ -14,7 +14,7 @@
 (add-sync! (get-env :out-path) #{"assets"})
 
 (require '[tailrecursion.hoplon.boot :refer :all]
-         '[tailrecursion.boot.task.ring   :refer [dev-server]])
+         '[tailrecursion.boot.task.ring :refer [dev-server]])
 
 (deftask development
   "Build shade for development."
